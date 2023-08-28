@@ -1,14 +1,15 @@
 class Poligon {
     dots = []
     touchStart
-    constructor(canvas, dotSize=5, lineSize=4, dotColor="#54426B", lineColor="#623CEA", background=false, cvsBackground="white") {
+    createdIndex = -1
+    constructor(canvas, collapse=true, dotSize=5, lineSize=4, dotColor="#54426B", lineColor="#623CEA", cvsBackground="white") {
         this.cvs = canvas
         this.ctx = canvas.getContext("2d")
+        this.collapse = collapse
         this.dotSize = dotSize
         this.lineSize = lineSize
         this.dotColor = dotColor
         this.lineColor = lineColor
-        this.background = background
         this.cvsBackground = cvsBackground
     }
     addDot(x, y){
@@ -22,13 +23,14 @@ class Poligon {
     }
     mouseDown = (e) => {
         this.touchStart = e
+        this.createdIndex = -1
         this.cvs.addEventListener("mousemove", this.mouseMove)
         this.cvs.addEventListener("mouseup", this.mouseUp)
 
         this.touchedIndex = this.findTouched(this.touchStart.offsetX, this.touchStart.offsetY)
         if(this.touchedIndex === -1) {
-            this.dots.push({x: e.offsetX, y: e.offsetY})
-            this.touchedIndex = this.dots.length-1
+            this.addDot(e.offsetX, e.offsetY)
+            this.createdIndex = this.touchedIndex = this.dots.length-1
         }
         this.render()
     }
@@ -40,14 +42,21 @@ class Poligon {
     mouseUp = (e) => {
         this.cvs.removeEventListener("mouseup", this.mouseUp)
         this.cvs.removeEventListener("mousemove", this.mouseMove)
-        if(this.touchStart.offsetX === e.offsetX && this.touchStart.offsetY === e.offsetY) {
-            const touchedIndex = this.findTouched(e.offsetX, e.offsetY)
-            if(touchedIndex === -1)
-                this.dots.push({x: e.offsetX, y: e.offsetY})
-            else
-                this.dots.splice(touchedIndex, 1)
+
+        const finishDotIndex = this.findTouched(e.offsetX, e.offsetY)
+
+        if (this.touchStart.offsetX === e.offsetX && this.touchStart.offsetY === e.offsetY) {
+            if(finishDotIndex !== this.createdIndex && finishDotIndex !== -1)
+                this.dots.splice(finishDotIndex, 1)
             this.render()
             return
+        }
+
+        if (this.collapse) {
+            if (this.touchedIndex !== finishDotIndex) {
+                this.dots.splice(this.touchedIndex, 1)
+                this.render()
+            }
         }
     }
 
@@ -60,9 +69,9 @@ class Poligon {
             this.ctx.strokeStyle = this.lineColor
             this.ctx.lineWidth = this.lineSize
 
-            i ?
-                this.ctx.moveTo(this.dots[i-1].x, this.dots[i-1].y) :
-                this.ctx.moveTo(this.dots.at(-1).x, this.dots.at(-1).y)
+            i
+                ? this.ctx.moveTo(this.dots[i-1].x, this.dots[i-1].y)
+                : this.ctx.moveTo(this.dots.at(-1).x, this.dots.at(-1).y)
             this.ctx.lineTo(el.x, el.y)
             this.ctx.stroke()
             this.ctx.closePath()
